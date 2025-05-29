@@ -28,24 +28,24 @@ userRouter.post("/login", (req,res)=>{
     userController.login(req,res);
 });
 
-userRouter.get("/details/:id",jwtAuth, (req,res)=>{
+userRouter.get("/details/:id", (req,res)=>{
     userController.getDetails(req,res);
 });
 
-userRouter.get("/allUsers/:id",jwtAuth, (req,res)=>{
+userRouter.get("/allUsers/:id", (req,res)=>{
     userController.getAll(req,res);
 });
 
-userRouter.post("/update/:id",jwtAuth, upload1.single('profileImage'), (req,res)=>{
+userRouter.post("/update/:id", upload1.single('profileImage'), (req,res)=>{
     userController.update(req,res);
 });
 
 
-userRouter.get("/filterbyLocation/:location",jwtAuth, (req, res)=>{
+userRouter.get("/filterbyLocation/:location", (req, res)=>{
     userController.filterByLocation(req, res);
 })
 
-userRouter.get("/filter/:sport/:loca/:id",jwtAuth, (req, res)=>{
+userRouter.get("/filter/:sport/:loca/:id", (req, res)=>{
    userController.filter(req, res);
 })
 
