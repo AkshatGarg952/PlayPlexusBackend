@@ -15,24 +15,24 @@ teamRouter.post("/login", (req,res)=>{
     teamController.login(req,res);
 });
 
-teamRouter.get("/details/:id",jwtAuth, (req,res)=>{
+teamRouter.get("/details/:id", (req,res)=>{
     teamController.getDetails(req,res);
 });
 
-teamRouter.get("/allTeams/:id", jwtAuth, (req,res)=>{
+teamRouter.get("/allTeams/:id", (req,res)=>{
     teamController.getAll(req,res);
 });
 
-teamRouter.post("/update/:id", jwtAuth, upload2.single('logo'), (req,res)=>{
+teamRouter.post("/update/:id", upload2.single('logo'), (req,res)=>{
     teamController.update(req,res);
 });
 
 
-teamRouter.get("/filterbyLocation/:location", jwtAuth, (req, res)=>{
+teamRouter.get("/filterbyLocation/:location", (req, res)=>{
     teamController.filterByLocation(req, res);
 })
 
-teamRouter.get("/filter/:sport/:loca/:id", jwtAuth, (req, res)=>{
+teamRouter.get("/filter/:sport/:loca/:id", (req, res)=>{
     teamController.filter(req, res);
 })
 
