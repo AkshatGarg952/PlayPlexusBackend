@@ -43,7 +43,7 @@ export default class userC{
   
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "Strict",
       });
   
@@ -64,7 +64,7 @@ export default class userC{
                          
                      res.cookie("token", token, {
                         httpOnly: true, 
-                        secure: true,
+                        secure: process.env.NODE_ENV === "production",
                         sameSite: "Strict", 
                     });
         res.status(200).send(user);
