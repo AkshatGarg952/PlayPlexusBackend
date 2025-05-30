@@ -132,7 +132,29 @@ export default async function ask(req, res) {
   }
 
   try {
-    const quickAnalysis = analyzeIntent(userSpeechText);
+    // First, detect language and translate if necessary
+    let detectedLang = detectLanguageWithFranc(userSpeechText);
+    console.log(`Detected language: ${detectedLang}`);
+    
+    let englishText;
+    let translationFailed = false;
+    
+    try {
+      if (detectedLang === "en") {
+        englishText = userSpeechText;
+      } else {
+        const translated = await translateText(userSpeechText, detectedLang, "en");
+        englishText = translated.text;
+        console.log(`Translated text: ${englishText}`);
+      }
+    } catch (transErr) {
+      translationFailed = true;
+      englishText = userSpeechText;
+      console.warn(`Translation failed, using original text: ${transErr.message}`);
+    }
+    
+    // Now analyze intent using the English text (either original or translated)
+    const quickAnalysis = analyzeIntent(englishText);
     
     if (quickAnalysis.intent === "findPlayersAndRedirect") {
       const play = quickAnalysis.category === "sport" ? quickAnalysis.sport : quickAnalysis.gameName;
@@ -146,31 +168,24 @@ export default async function ask(req, res) {
         redirectUrl = `/FUserPage/${id}/${encodeURIComponent(play)}/${encodeURIComponent(location)}`;
       }
       
+      // Translate the response back to the original language if needed
+      let responseText = "Here is the link for your destination";
+      if (detectedLang !== "en" && !translationFailed) {
+        try {
+          const translatedResponse = await translateText(responseText, "en", detectedLang);
+          responseText = translatedResponse.text;
+        } catch (e) {
+          console.warn("Failed to translate response, using English:", e.message);
+        }
+      }
+      
       return res.status(200).json({
-        text: "Here is the link for your destination",
+        text: responseText,
         link: redirectUrl,
       });
     }
     
-    let detectedLang = detectLanguageWithFranc(userSpeechText);
-    console.log(`Detected language: ${detectedLang}`);
-    
-    let englishText;
-    let translationFailed = false;
-    
-    try {
-      if (detectedLang === "en") {
-        englishText = userSpeechText;
-      } else {
-        const translated = await translateText(userSpeechText, detectedLang, "en");
-        englishText = translated.text;
-      }
-    } catch (transErr) {
-      translationFailed = true;
-      englishText = userSpeechText;
-      console.warn(`Translation failed, using original text: ${transErr.message}`);
-    }
-    
+    // If no Gemini API key is available
     if (!GEMINI_API_KEY) {
       const errorMsg = "API key missing. Please contact support.";
       if (detectedLang !== "en" && !translationFailed) {
@@ -184,6 +199,7 @@ export default async function ask(req, res) {
       return res.status(500).json({ error: errorMsg });
     }
     
+    // If intent is not recognized, return the "not designed" error
     const errorMsg = "Sorry, currently the chatbot is not designed to answer advanced queries.";
     if (detectedLang !== "en" && !translationFailed) {
       try {
