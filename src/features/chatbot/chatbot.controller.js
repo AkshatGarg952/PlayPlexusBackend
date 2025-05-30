@@ -7,7 +7,7 @@ dotenv.config();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const LIBRETRANSLATE_API_URLS = [
   "https://libretranslate.de",
-  "https://translate.argosopentech.com", // Fallback public instance
+  "https://translate.argosopentech.com",
 ];
 
 // Simple language detection using franc
@@ -20,11 +20,10 @@ function detectLanguageWithFranc(text) {
 const francToLibreMap = {
   eng: "en", fra: "fr", deu: "de", spa: "es", por: "pt", ita: "it", nld: "nl",
   pol: "pl", rus: "ru", jpn: "ja", zho: "zh", ara: "ar", hin: "hi", kor: "ko",
-  // ... other language codes shortened for readability
 };
 
 function getLibreLang(francLang) {
-  return francToLibreMap[francLang] || "en"; // Fallback to English
+  return francToLibreMap[francLang] || "en";
 }
 
 // Function to translate text using LibreTranslate
@@ -42,7 +41,7 @@ async function translateText(text, sourceLang, targetLang, retries = 2, delay = 
           },
           {
             headers: { "Content-Type": "application/json" },
-            timeout: 5000, // Reduced timeout
+            timeout: 5000,
           }
         );
         return {
@@ -51,7 +50,6 @@ async function translateText(text, sourceLang, targetLang, retries = 2, delay = 
         };
       } catch (error) {
         console.warn(`Translation attempt ${i + 1} failed for ${url}: ${error.message}`);
-        // Continue to next URL or retry
       }
     }
     if (i < retries - 1) {
@@ -65,7 +63,6 @@ async function translateText(text, sourceLang, targetLang, retries = 2, delay = 
 function analyzeIntent(text) {
   text = text.toLowerCase();
   
-  // Check if trying to find players/teams
   const findPattern = /(find|search|looking for|get|show|display) (players|teams|player|team)/i;
   const isFindIntent = findPattern.test(text);
   
@@ -73,7 +70,6 @@ function analyzeIntent(text) {
     return { intent: null };
   }
   
-  // Simple pattern matching for sports
   const sportsList = ["cricket", "football", "soccer", "basketball", "volleyball", "tennis", 
                      "badminton", "hockey", "baseball", "rugby"];
   const gamesList = ["fortnite", "pubg", "valorant", "dota", "league of legends", "apex legends", 
@@ -83,7 +79,6 @@ function analyzeIntent(text) {
   let game = null;
   let type = text.includes("team") ? "team" : "player";
   
-  // Find sport or game
   for (const s of sportsList) {
     if (text.includes(s)) {
       sport = s;
@@ -100,7 +95,6 @@ function analyzeIntent(text) {
     }
   }
   
-  // Extract city using simple pattern
   const cityPattern = /(?:from|in) ([a-zA-Z]+)/i;
   const cityMatch = text.match(cityPattern);
   const city = cityMatch ? cityMatch[1].toLowerCase() : null;
@@ -112,7 +106,6 @@ function analyzeIntent(text) {
       category,
       sport,
       gameName: game,
-      device: null,
       type,
       city,
       intent: "findPlayersAndRedirect"
@@ -124,7 +117,7 @@ function analyzeIntent(text) {
 
 export default async function ask(req, res) {
   const { userSpeechText } = req.body;
-  const { uId, tId } = req.params;
+  const { id } = req.params;
 
   if (!userSpeechText || typeof userSpeechText !== "string") {
     return res.status(400).json({
@@ -132,20 +125,25 @@ export default async function ask(req, res) {
     });
   }
 
+  if (!id) {
+    return res.status(400).json({
+      error: "Missing id in request parameters",
+    });
+  }
+
   try {
-    // First try simple keyword-based analysis
     const quickAnalysis = analyzeIntent(userSpeechText);
     
     if (quickAnalysis.intent === "findPlayersAndRedirect") {
-      // Fast path: we found what we need with simple keyword matching
       const play = quickAnalysis.category === "sport" ? quickAnalysis.sport : quickAnalysis.gameName;
       const userType = quickAnalysis.type;
+      const location = quickAnalysis.city;
       
       let redirectUrl;
       if (userType === "team") {
-        redirectUrl = `/filteredTeams/${uId}/${tId}/${encodeURIComponent(play)}/${encodeURIComponent(quickAnalysis.city)}`;
+        redirectUrl = `/FTeamPage/${id}/${encodeURIComponent(play)}/${encodeURIComponent(location)}`;
       } else {
-        redirectUrl = `/filteredUsers/${uId}/${tId}/${encodeURIComponent(play)}/${encodeURIComponent(quickAnalysis.city)}`;
+        redirectUrl = `/FUserPage/${id}/${encodeURIComponent(play)}/${encodeURIComponent(location)}`;
       }
       
       return res.status(200).json({
@@ -154,11 +152,9 @@ export default async function ask(req, res) {
       });
     }
     
-    // Detect language for translation if needed
     let detectedLang = detectLanguageWithFranc(userSpeechText);
     console.log(`Detected language: ${detectedLang}`);
     
-    // Translate to English if not in English
     let englishText;
     let translationFailed = false;
     
@@ -175,7 +171,6 @@ export default async function ask(req, res) {
       console.warn(`Translation failed, using original text: ${transErr.message}`);
     }
     
-    // If Gemini API key is missing
     if (!GEMINI_API_KEY) {
       const errorMsg = "API key missing. Please contact support.";
       if (detectedLang !== "en" && !translationFailed) {
@@ -189,7 +184,6 @@ export default async function ask(req, res) {
       return res.status(500).json({ error: errorMsg });
     }
     
-    // Return standard error for unsupported queries
     const errorMsg = "Sorry, currently the chatbot is not designed to answer advanced queries.";
     if (detectedLang !== "en" && !translationFailed) {
       try {
