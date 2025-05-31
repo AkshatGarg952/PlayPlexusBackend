@@ -4,7 +4,7 @@ const chatBotRouter = express.Router();
 import jwtAuth from "../../middleware/jwt.auth.js";
 
 
-chatBotRouter.post("/ask/:id", (req,res)=>{
+chatBotRouter.post("/ask/:id",jwtAuth, (req,res)=>{
     ask(req, res);
 });
 
