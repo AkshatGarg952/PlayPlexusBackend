@@ -39,12 +39,10 @@ export default class teamC{
         const team = await teamRepository.register(Team);
         const token = jwt.sign({ id: team._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
                          
-                     res.cookie("token", token, {
-                        httpOnly: true, 
-                        secure: process.env.NODE_ENV === "production",
-                        sameSite: "Strict", 
-                    });
-        res.status(200).send(team);
+                     res.status(200).json({
+    team: team,
+    token: token
+});
         }
         catch(err){
           res.status(400).send(err);
@@ -57,12 +55,10 @@ export default class teamC{
           const team = await teamRepository.login(email,password);
           const token = jwt.sign({ id: team._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
                          
-          res.cookie("token", token, {
-             httpOnly: true, 
-             secure: process.env.NODE_ENV === "production",
-             sameSite: "Strict", 
-         });
-res.status(200).send(team);
+          res.status(200).json({
+    team: team,
+    token: token
+});
         }
         catch(err){
            res.status(400).send(err);
