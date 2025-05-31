@@ -3,18 +3,22 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const jwtAuth = (req, res, next) => {
-  const token = req.cookies.token;
+  // Get token from Authorization header: "Bearer <token>"
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  // Extract token part after "Bearer "
+  const token = authHeader.split(' ')[1];
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); 
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // attach decoded payload to req.user
     next();
   } catch (error) {
-    res.status(403).json({ message: "Invalid token" });
+    return res.status(403).json({ message: "Invalid token" });
   }
 };
 
