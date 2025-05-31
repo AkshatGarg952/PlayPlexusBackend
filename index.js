@@ -21,7 +21,7 @@ dotenv.config();
 const app = express();
 app.use(cookieParser());
 app.use(cors({
-  origin: 'https://play-plexus-frontend.vercel.app/',
+  origin: 'https://play-plexus-frontend.vercel.app',
   credentials: true
 }));
 app.use(express.urlencoded({ extended: true }));
@@ -37,7 +37,7 @@ app.use('/api/chatBot', chatBotRouter);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: 'https://play-plexus-frontend.vercel.app/', 
+    origin: 'https://play-plexus-frontend.vercel.app', 
     methods: ['GET', 'POST'],
     credentials: true,
   },
