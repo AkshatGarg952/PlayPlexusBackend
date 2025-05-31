@@ -5,7 +5,7 @@ import jwtAuth from "../../middleware/jwt.auth.js";
 const chatRouter = express.Router();
 const chatController = new chatC();
 
-chatRouter.get("/fetch/:sId/:rId", (req,res)=>{
+chatRouter.get("/fetch/:sId/:rId",jwtAuth, (req,res)=>{
     chatController.fetch(req,res);
 });
 
