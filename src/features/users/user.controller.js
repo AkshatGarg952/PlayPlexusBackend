@@ -41,13 +41,10 @@ export default class userC{
       const user = await userRepository.register(User);
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
   
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-      });
-  
-      res.status(200).send(user);
+      res.status(200).json({
+    user: user,
+    token: token
+});
     } catch (err) {
       res.status(400).send(err);
     }
@@ -62,12 +59,10 @@ export default class userC{
           const user = await userRepository.login(email,password);
           const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
                          
-                     res.cookie("token", token, {
-                        httpOnly: true, 
-                        secure: process.env.NODE_ENV === "production",
-                        sameSite: "Strict", 
-                    });
-        res.status(200).send(user);
+        res.status(200).json({
+    user: user,
+    token: token
+});
         }
         catch(err){
             res.status(400).send(err);
