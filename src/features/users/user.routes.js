@@ -1,58 +1,32 @@
-import express from "express";
-import userC from "./user.controller.js";
-import {upload1} from "../../middleware/multer.middleware.js";
-import jwtAuth from "../../middleware/jwt.auth.js";
+import express from 'express';
+import User from './user.schema.js';
+import { createAccountRepository } from '../accounts/account.repository.js';
+import { createAccountController } from '../accounts/account.controller.js';
+import { uploadProfileImage } from '../../middleware/multer.middleware.js';
+import jwtAuth from '../../middleware/jwt.auth.js';
+
+const repository = createAccountRepository({
+  Model: User,
+  label: 'User',
+  uniqueFields: [{ field: 'username', message: 'User with this username already exists!' }],
+});
+
+const controller = createAccountController({
+  repository,
+  resourceKey: 'user',
+  imageField: 'profileImage',
+  textFields: ['name', 'username', 'email', 'password', 'phone', 'location', 'bio'],
+});
+
 const userRouter = express.Router();
-const userController = new userC();
 
-userRouter.post("/register", async (req, res) => {
-  try {
-    await upload1.single('profileImage')(req, res, (err) => {
-      if (err) {
-        console.error('Multer/Cloudinary Error:', err.message, err.stack);
-        return res.status(400).json({ error: err.message });
-      }
-      console.log('Request Body:', req.body);
-      console.log('Uploaded File:', req.file);
-      userController.register(req, res);
-    });
-  } catch (err) {
-    console.error('Route Error:', err.message, err.stack);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+userRouter.post('/register', uploadProfileImage, controller.register);
+userRouter.post('/login', controller.login);
 
-
-userRouter.post("/login", (req,res)=>{
-    console.log(req.body);
-    userController.login(req,res);
-});
-
-userRouter.get("/details/:id",jwtAuth, (req,res)=>{
-    userController.getDetails(req,res);
-});
-
-userRouter.get("/allUsers/:id",jwtAuth, (req,res)=>{
-    userController.getAll(req,res);
-});
-
-userRouter.post("/update/:id",jwtAuth, upload1.single('profileImage'), (req,res)=>{
-    userController.update(req,res);
-});
-
-
-userRouter.get("/filterbyLocation/:location",jwtAuth, (req, res)=>{
-    userController.filterByLocation(req, res);
-})
-
-userRouter.get("/filter/:sport/:loca/:id",jwtAuth, (req, res)=>{
-   userController.filter(req, res);
-})
-
-
-
-
-
-
+userRouter.get('/details/:id', jwtAuth, controller.getDetails);
+userRouter.get('/allUsers/:id', jwtAuth, controller.getAll);
+userRouter.post('/update/:id', jwtAuth, uploadProfileImage, controller.update);
+userRouter.get('/filterbyLocation/:location', jwtAuth, controller.filterByLocation);
+userRouter.get('/filter/:sport/:loca/:id', jwtAuth, controller.filter);
 
 export default userRouter;

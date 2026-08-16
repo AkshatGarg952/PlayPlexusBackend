@@ -1,23 +1,20 @@
-import Message from "./chat.schema.js";
-export default class chatR{
+import Message from './chat.schema.js';
+import { conversationIdFor } from './chat.schema.js';
 
+export default class ChatRepository {
+  /** Full history between two accounts, oldest first. */
+  async history(senderId, receiverId) {
+    return Message.find({ conversationId: conversationIdFor(senderId, receiverId) }).sort({
+      createdAt: 1,
+    });
+  }
 
-    async fetch(senderId, receiverId){
-
-        const messages = await Message.find({
-                    $or: [
-                        { senderId, receiverId },
-                        { senderId: receiverId, receiverId: senderId }
-                    ]
-                }).sort({ createdAt: 1 });
-        
-                return messages;
-    }
-    
-
-    
-
-    
-
-    
+  async create({ senderId, receiverId, message }) {
+    return Message.create({
+      conversationId: conversationIdFor(senderId, receiverId),
+      senderId,
+      receiverId,
+      message,
+    });
+  }
 }

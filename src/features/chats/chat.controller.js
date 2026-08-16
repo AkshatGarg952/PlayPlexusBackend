@@ -1,21 +1,18 @@
-import chatR from "./chat.repository.js";
-const chatRepository = new chatR();
+import ChatRepository from './chat.repository.js';
+import ApiError from '../../utils/ApiError.js';
+import asyncHandler from '../../utils/asyncHandler.js';
 
+const repository = new ChatRepository();
 
-export default class chatC{
+export default class ChatController {
+  fetch = asyncHandler(async (req, res) => {
+    const { sId, rId } = req.params;
 
-    async fetch(req, res){
-     try{
-      const messages = await chatRepository.fetch(req.params.sId, req.params.rId);
-      console.log(messages);
-      res.status(200).send(messages);
-     }
-     catch(err){
-        res.send(400).send(err.message);
-     }
+    // A conversation is only readable by one of its two participants.
+    if (req.user.id !== sId && req.user.id !== rId) {
+      throw ApiError.forbidden('You are not part of this conversation.');
     }
 
-
-
-
+    res.status(200).json(await repository.history(sId, rId));
+  });
 }

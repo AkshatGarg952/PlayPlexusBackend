@@ -1,81 +1,83 @@
-import requestR from "./request.repository.js";
-const requestRepository = new requestR();
+import RequestRepository from './request.repository.js';
+import ApiError from '../../utils/ApiError.js';
+import asyncHandler from '../../utils/asyncHandler.js';
+import { accountRoom } from '../../realtime/socket.js';
 
-export default class requestC {
+const repository = new RequestRepository();
 
-    async send(req, res){
-        try{
-            const {sId, rId} = req.params;
-            await requestRepository.send(sId, rId, req.body);
-            res.status(200).send("Request Sended Successfuly!");
-        }
-        catch(err){
-            res.status(401).send(err.message);
-        }
-    }
+/** Only the account named in the token may read or act on its own requests. */
+const assertSelf = (req, id) => {
+  if (req.user.id !== id) {
+    throw ApiError.forbidden('You can only access your own requests.');
+  }
+};
 
-    async send2(req, res){
-        try{
-            const {sId, rId} = req.params;
-            await requestRepository.send(sId, rId, req.body);
-            res.redirect(`/allTeams/${sId}/${sId}`);
-        }
-        catch(err){
-            res.status(401).send(err.message);
-        }
-    }
+/**
+ * Pushes a status change to both participants. Emitting from here (rather than
+ * trusting a client-sent socket event) means the broadcast can only follow a
+ * change the server has already authorised.
+ */
+const broadcastStatus = (req, request) => {
+  const io = req.app.get('io');
+  if (!io) return;
 
-    async getAll(req, res){
-        const requests = await requestRepository.getAll(req.params.id);
-        res.status(201).send(requests);
-    }
+  const payload = { id: String(request._id), status: request.status, seen: request.seen };
 
-    async getAll2(req, res){
-        const requests = await requestRepository.getAll2(req.params.id);
-        res.status(201).send(requests);
-    }
+  io.to(accountRoom(request.sender)).emit('receive', payload);
+  io.to(accountRoom(request.receiver)).emit('receive', payload);
+};
 
-    async sended(req, res){
-        const requests = await requestRepository.sended(req.params.id);
-        res.status(201).send(requests);
-    }
+export default class RequestController {
+  send = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.sId);
 
-    async received(req, res){
-        const requests = await requestRepository.received(req.params.id);
-        res.status(201).send(requests);
-    }
+    const request = await repository.send(req.params.sId, req.params.rId, req.body);
 
-    async accept(req, res){
-        await requestRepository.accept(req.params.aId, req.params.rId);
-        res.status(201).send("Accepted the request!");
-    }
+    // Let the receiver's open tabs show the new request without a refresh.
+    req.app.get('io')?.to(accountRoom(request.receiver)).emit('requestCreated', request.toJSON());
 
-    async reject(req, res){
-        await requestRepository.reject(req.params.aId, req.params.rId);
-        res.status(201).send("Rejected the request!");
-    }
+    res.status(201).json(request);
+  });
 
+  getAll = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    res.status(200).json(await repository.findAllFor(req.params.id));
+  });
 
-    async cancel(req, res){
-        await requestRepository.cancel(req.params.aId, req.params.rId);
-        res.status(201).send("Cancelled the request!");
-    }
+  getUnseen = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    res.status(200).json(await repository.findUnseenFor(req.params.id));
+  });
 
-    async sender(req, res){
-        const ans = await requestRepository.sender(req.params.id);
-        res.status(201).send(ans);
-      }
-  
-      async receiver(req, res){
-        const ans = await requestRepository.receiver(req.params.id);
-        res.status(201).send(ans);
-      }
+  getSent = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    res.status(200).json(await repository.findSentBy(req.params.id));
+  });
 
-       async update(req, res){
-        const requests = await requestRepository.update(req.body.status, req.params.id);
-        res.status(201).send(requests);
-    }
-    
+  getReceived = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    res.status(200).json(await repository.findReceivedBy(req.params.id));
+  });
 
-    
+  updateStatus = asyncHandler(async (req, res) => {
+    const request = await repository.updateStatus(req.params.id, req.body.status, req.user.id);
+    broadcastStatus(req, request);
+    res.status(200).json(request);
+  });
+
+  markSeen = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    await repository.markSeen(req.params.id);
+    res.status(204).end();
+  });
+
+  senderSummary = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    res.status(200).json(await repository.sentSummary(req.params.id));
+  });
+
+  receiverSummary = asyncHandler(async (req, res) => {
+    assertSelf(req, req.params.id);
+    res.status(200).json(await repository.receivedSummary(req.params.id));
+  });
 }

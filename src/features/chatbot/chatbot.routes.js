@@ -1,11 +1,9 @@
-import express from "express";
-import ask from "./chatbot.controller.js";
+import express from 'express';
+import { ask } from './chatbot.controller.js';
+import jwtAuth from '../../middleware/jwt.auth.js';
+
 const chatBotRouter = express.Router();
-import jwtAuth from "../../middleware/jwt.auth.js";
 
-
-chatBotRouter.post("/ask/:id",jwtAuth, (req,res)=>{
-    ask(req, res);
-});
+chatBotRouter.post('/ask/:id', jwtAuth, ask);
 
 export default chatBotRouter;

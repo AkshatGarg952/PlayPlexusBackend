@@ -1,15 +1,24 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import config from '../config/env.js';
 
-dotenv.config();
-const connectDB = async () => {
-    try {
-      await mongoose.connect(process.env.DATABASE_URL, {
+/**
+ * Opens the MongoDB connection. Rejects on failure so the caller can abort
+ * start-up rather than serving requests against a database that isn't there.
+ */
+export const connectDB = async () => {
+  mongoose.set('strictQuery', true);
 
-      });
-      console.log('MongoDB connected');
-    } catch (error) {
-      console.error('Database connection error:', error.message);
-    }
-  };
-  export default connectDB;
+  await mongoose.connect(config.databaseUrl);
+  console.log('[db] MongoDB connected');
+
+  mongoose.connection.on('error', (error) => {
+    console.error('[db] connection error:', error.message);
+  });
+  mongoose.connection.on('disconnected', () => {
+    console.warn('[db] disconnected');
+  });
+};
+
+export const disconnectDB = () => mongoose.connection.close();
+
+export default connectDB;

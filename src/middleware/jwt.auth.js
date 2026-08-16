@@ -1,24 +1,31 @@
-import jwt from "jsonwebtoken";
-import dotenv from 'dotenv';
-dotenv.config();
+import jwt from 'jsonwebtoken';
+import config from '../config/env.js';
 
+/** Verifies a token and returns its payload, or throws. Shared with the socket layer. */
+export const verifyToken = (token) => jwt.verify(token, config.jwtSecret);
+
+/**
+ * Requires a valid `Authorization: Bearer <token>` header and attaches the
+ * decoded payload to `req.user`.
+ */
 const jwtAuth = (req, res, next) => {
-  // Get token from Authorization header: "Bearer <token>"
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Missing or malformed Authorization header' });
   }
 
-  // Extract token part after "Bearer "
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.slice('Bearer '.length).trim();
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // attach decoded payload to req.user
-    next();
+    req.user = verifyToken(token);
+    return next();
   } catch (error) {
-    return res.status(403).json({ message: "Invalid token" });
+    const expired = error.name === 'TokenExpiredError';
+    return res.status(401).json({
+      message: expired ? 'Session expired, please log in again' : 'Invalid token',
+      code: expired ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
+    });
   }
 };
 
