@@ -22,6 +22,9 @@ const list = (key, fallback = []) => {
   return value
     .split(',')
     .map((item) => item.trim())
+    // A browser's Origin header never has a trailing slash, so an entry like
+    // "https://example.com/" would never match and would block every request.
+    .map((item) => item.replace(/\/+$/, ''))
     .filter(Boolean);
 };
 
