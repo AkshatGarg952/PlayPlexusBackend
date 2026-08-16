@@ -25,7 +25,13 @@ Built with **Express 5**, **MongoDB/Mongoose**, **Socket.IO** and **JWT** auth.
 
 ## Quick start
 
-**Requirements:** Node.js 18+ and a MongoDB database (local or Atlas).
+**Requirements:** Node.js 18-23 (22 LTS recommended) and a MongoDB database
+(local or Atlas).
+
+> **Node 24+ is not supported.** `jsonwebtoken` depends on
+> `buffer-equal-constant-time`, which uses the `SlowBuffer` API that newer
+> Node releases removed — the process crashes on start-up. The version is
+> pinned in `.node-version` and `engines.node`; keep both in step.
 
 ```bash
 cd PlayPlexusBackend
@@ -362,6 +368,13 @@ close, and the database connection is released.
 `multer-storage-cloudinary@4` declares a peer of `cloudinary@^1`, but this project
 uses `cloudinary@2`. The v2 API it relies on is compatible, so install with
 `--legacy-peer-deps`. Replacing that package is the proper long-term fix.
+
+**`TypeError: Cannot read properties of undefined (reading 'prototype')`
+in `buffer-equal-constant-time`**
+The host is running Node 24 or newer. Pin Node 22 — commit `.node-version`,
+or set `NODE_VERSION=22` in your host's environment. On Render, redeploy
+with **Clear build cache & deploy** so the native `bcrypt` binding is
+rebuilt for the new Node ABI.
 
 **Process exits with `Missing required environment variable`**
 `.env` is absent or incomplete. Copy `.env.example` and fill it in.
